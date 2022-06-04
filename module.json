@@ -2,7 +2,7 @@
 	"name": "scaleGrid",
 	"title": "Grid Scaler",
 	"description": "Draw direcly in a scene to set the grid scale. Works with both square and hex maps.",
-	"version": "0.0.15",
+	"version": "1.0.0",
 	"author": "UberV/ArcaneRoboBrain",
 	"scripts": [
 		"./gridScale.js"
