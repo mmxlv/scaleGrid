@@ -1,5 +1,5 @@
 ![Latest Version](https://img.shields.io/github/v/release/jbhaywood/scaleGrid)
-![Foundry Version](https://img.shields.io/endpoint?url=https%3A%2F%2Ffoundryshields.com%2Fversion%3Fstyle%3Dflat%26url%3Dhttps%3A%2F%2Fraw.githubusercontent.com%2Fjbhaywood%2FscaleGrid%2Fmain%2Fmodule.json)
+![Foundry Version](https://img.shields.io/endpoint?url=https%3A%2F%2Ffoundryshields.com%2Fversion%3Fstyle%3Dflat%26url%3Dhttps%3A%2F%2Fraw.githubusercontent.com%2Fjbhaywood%2FscaleGrid%2Fmaster%2Fmodule.json)
 ![Forge Installs](https://img.shields.io/badge/dynamic/json?label=Forge%20Installs&query=package.installs&suffix=%25&url=https%3A%2F%2Fforge-vtt.com%2Fapi%2Fbazaar%2Fpackage%2FscaleGrid&colorB=blueviolet)
 ![License](https://img.shields.io/github/license/jbhaywood/scaleGrid)
 
