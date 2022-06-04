@@ -3,7 +3,7 @@
 	"title": "Grid Scale Menu",
 	"description": "Draw direcly in a scene to set the grid scale. Works with both square and hex maps.",
 	"version": "1.0.3",
-	"author": "UberV/ArcaneRoboBrain",
+	"author": "ArcaneRoboBrain",
 	"scripts": [
 		"./gridScale.js"
 	],
