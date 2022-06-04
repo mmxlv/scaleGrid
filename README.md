@@ -1,17 +1,11 @@
-## Grid Scaler
+![Latest Version](https://img.shields.io/github/v/release/jbhaywood/scaleGrid)
+![Foundry Version](https://img.shields.io/endpoint?url=https%3A%2F%2Ffoundryshields.com%2Fversion%3Fstyle%3Dflat%26url%3Dhttps%3A%2F%2Fraw.githubusercontent.com%2Fjbhaywood%2FscaleGrid%2Fmaster%2Fmodule.json)
+![Forge Installs](https://img.shields.io/badge/dynamic/json?label=Forge%20Installs&query=package.installs&suffix=%25&url=https%3A%2F%2Fforge-vtt.com%2Fapi%2Fbazaar%2Fpackage%2FscaleGrid&colorB=blueviolet)
+![GitHub](https://img.shields.io/github/license/jbhaywood/scaleGrid)
 
-## Compatibility
+# Grid Scaler
 
-Requires FVTT version 0.4.0 or higher
-
-To install a module, follow these instructions:
-
-1. Download the zip file
-2. Extract the included folder to `public/modules` in your Foundry Virtual Tabletop installation folder.
-3. Make sure the extracted folder is named "scaleGrid" and not "scaleGrid-master". Rename it if necesarry.
-3. Restart Foundry Virtual Tabletop. 
-
-## How to Use the plugin
+## How to Use
 
 Once the plugin is loaded a new wrench icon will appear below the main tool selection.
 
@@ -47,51 +41,6 @@ Click on this icon and you will be presented with Six more icons. (Imgur Album -
 
 It may not be perfect but it will be close. 
 
-### Features in planning (maybe?)
-
-1. Fix auto-grid - Need to figure out how to deal with the scenes size changing when grid sizes change as this throws off the original click location.
-
-### Changes in version - 0.0.8
-
-1. Added the ability to scale the grid with Hexes and adjust the X/Y offsets using exsisting tools. 
-2. Updated Readme to show new buttons/layout.
-
-### Changes in version - 0.0.7
-
-1. Changed how the buttons are added to the screen. Now using the API provided by foundry. From here forward new updates **WILL NOT WORK** with older versions.
-2. Added a 3x3 button. This will allow users to select a 3x3 area of grid squares and have foundry calculate the grid size from that.
-
-### Changes in version - 0.0.6
-
-MIA - We dont talk about this version
-
-### Changes in version - 0.0.5
-
-1. Removed auto-grid due to issues with click points changing when the scene gets updated and throwing off the calculations. Needs more calibration.
-2. Changed the Adjust X/Y buttons to work with both positive and negitive values so the map/grid does not end up in a far corner somewhere.
-3. Added a check for drawn grids being smaller than 50px. If smaller nothing happens, but if it is larger then a number shows up indicating grid square size.
-
-### Changes in version - 0.0.4
-
-1. Updated plugin to  work with foundry 2.8, now no longer on its own canvas. No Idea why I was doing it that way anyway.
-
-### Changes in version - 0.0.3
-
-1. Setup the ability for users to draw a square and have the grid set to its size, then depening on tool selection either apply X/Y offsets or not.
-2. Removed the two click set grid square button and replaced its function with a drawn square with no offset applied.
-
-### Changes in version - 0.0.2
-
-1. Disabled the complete auto button from the original code. Found that while it kinda worked, it also kinda did not. So I split the functions out into separate buttons until the full auto thing can be figured out.
-2. Added a new button structure under the existing controls menu. 
-3. Broke apart the main getPosition function into three functions, getPostition for grid scaling - setXOff and setYOff to set the axis.
-
-### Known issues
-
-1.Clean up this mess, wow...
-
 ## Notes and Mentions
 
-This is my first foray into working with Javascript/HTML/jQuery/CSS. So its rough but I hope to polish it up. Any suggestions on code/cleanup/what can be done better just message me on discord!
-
-### Big thanks to Atropos, Felix ( aka sly3r86 ), Errational, xmclark, and Iron-E for their help and the code which was totally not butchered to make this.
+This module was first created by UberV. I'm taking it over to get some bug fixed and possibly add new features in the future.
