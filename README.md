@@ -39,7 +39,13 @@ Click on this icon and you will be presented with Six more icons. (Imgur Album -
 ![Draw Hex Fh](https://i.imgur.com/JuPqFoQ.gif)
 ![Draw Hex Ph](https://i.imgur.com/2vCRqXT.gif)
 
-It may not be perfect but it will be close. 
+It may not be perfect but it will be close.
+
+## To Do
+- Update this help file.
+- Add buttons to increase/decrease the grid size by small increments, since the drawing tools often need just a little bit of adjustment afterwards.
+- Auto-calculate the offset after using one of the draw tools. Could possibly get rid of the horizontal and vertical adjustment buttons then.
+- Add button to set to the current size and position of the map. Not exactly grid related, but I do this all the time and it sucks to have to go into the map config to do it.
 
 ## Notes and Mentions
 
