@@ -1,14 +1,14 @@
 {
 	"name": "scaleGrid",
-	"title": "Grid Scale Menu",
-	"description": "Draw direcly in a scene to set the grid scale. Works with both square and hex maps.",
+	"title": "Grid Scaler",
+	"description": "A set of tools to quickly match the scene grid to your map's grid. Works with both squares and hexes.",
 	"version": "1.2.0",
 	"author": "ArcaneRoboBrain",
-	"scripts": [
-		"./gridScale.js"
+	"esmodules": [
+		"./scripts/gridScale.js"
 	],
 	"styles": [
-		"./gridScale.css"
+		"./styles/gridScale.css"
 	],
 	"packs": [],
 	"url": "https://github.com/jbhaywood/scaleGrid/",
