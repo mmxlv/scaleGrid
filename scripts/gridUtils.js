@@ -1,14 +1,33 @@
 export class gridUtils {
-  static printOperationLog(desc, num) {
+  // LOG UTILS
+  ////////////////////////////////////////////////////
+  static logOperation(desc, num) {
     gridScaler.printLog(`The grid ${desc} was set to ${num}.`);
   }
 
-  static printLog(message) {
+  static log(message) {
     console.log(`Grid Scale | ${message}`);
   }
 
-  static async getGridSizeByCount(gridSize) {
-    if (!gridSize) {
+  // CANVAS UTILS
+  ////////////////////////////////////////////////////
+  static getMousePos(evt) {
+    let result = null;
+
+    if (evt) {
+      result = evt.data.getLocalPosition(canvas.app.stage)
+    } else {
+      let mouse = canvas.app.renderer.plugins.interaction.mouse;
+      result = mouse.getLocalPosition(canvas.app.stage);
+    }
+
+    return result;
+  }
+
+  // GRID UTILS
+  ////////////////////////////////////////////////////
+  static async getGridSizeByCount(gridCount) {
+    if (!gridCount) {
       return 0;
     }
 
@@ -19,14 +38,19 @@ export class gridUtils {
     switch (gridType) {
       // If this is a square grid, or a hex grid with rows, assume the number is the horizontal cell count.
       case 1:
+        size = dimensions.sceneWidth / gridCount;
       case 2:
       case 3:
-        size = dimensions.sceneWidth / gridSize;
+        // Find the width of the hex by dividing the number of hexes into the width of the scene.
+        // The final size is the height of the hex. Get the height by multiplying the width by 1.15471.
+        size = dimensions.sceneWidth / gridCount * 1.15471;
         break;
       // If this is a hex grid with columns, assume the number is the vertical cell count.
       case 4:
       case 5:
-        size = dimensions.sceneHeight / gridSize;
+        // Find the height of the hex by dividing the number of hexes into the height of the scene.
+        // The final size is the width of the hex. Get the width by multiplying the height by 1.15471.
+        size = dimensions.sceneHeight / gridCount * 1.15471;
         break;
     }
 
@@ -71,5 +95,15 @@ export class gridUtils {
     else {
       return p3
     }
+  }
+
+  // SCENE UTILS
+  ////////////////////////////////////////////////////
+  static getAdjustedSceneSize(gridSize) {
+    const adjustment = 50 / gridSize;
+    const newHeight = Math.round(canvas.dimensions.sceneHeight * adjustment)
+    const newWidth = Math.round(canvas.dimensions.sceneWidth * adjustment)
+
+    return { grid: 50, width: newWidth, height: newHeight, adjustment: adjustment };
   }
 }

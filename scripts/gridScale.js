@@ -5,7 +5,7 @@ import {
 class ScaleGridLayer extends CanvasLayer {
   constructor() {
     super();
-    console.log("Grid Scale | Drawing Layer | Loaded into Drawing Layer");
+    gridUtils.log("Loaded into Drawing Layer");
     this.select = null;
     this.pixiGraphics = null;    //a variable not used
     this.pixiText = null; // used but not finished yet
@@ -79,13 +79,13 @@ class ScaleGridLayer extends CanvasLayer {
 
   // From foundry.js =  this adds the mousedown/mousemove/mouseup to the canvas calls their corresponding functions.
   addListeners() {
-    console.log("Grid Scale | Drawing Layer | **** Running add listeners ****");
+    gridUtils.log("Add listeners");
     canvas.stage.addListener('mousedown', gridScaler.gridOnMouseDown);
   }
 
   // From foundry.js =  this removes the mousedown/mousemove/mouseup to the canvas and calls their corresponding functions.
   removeListeners() {
-    console.log("Grid Scale | Drawing Layer | **** Running remove listeners ****");
+    gridUtils.log("Remove listeners");
     canvas.stage.removeListener('mousedown', gridScaler.gridOnMouseDown);
     canvas.stage.removeListener("mousemove", gridScaler.gridOnMouseMove);
     canvas.stage.removeListener("mouseup", gridScaler.gridOnMouseUp);
@@ -99,11 +99,15 @@ class ScaleGridLayer extends CanvasLayer {
 
   // <================== Start Mouse Actions  ====================>
 
-  gridOnMouseDown(e) {
-    const mousePos = gridScaler.getMousePos(e);
+  gridOnMouseDown(evt) {
+    const mousePos = gridUtils.getMousePos(evt);
 
     switch (gridScaler.currentTool) {     //this switch statement checks the value of the active tool from gridControls then picks the right function on mouse click.
-      case "ResetGridTool":
+      case "DrawSquareTool":
+      case "Draw3x3Tool":
+      case "DrawHexTool":
+        gridScaler.ogMouseCoords = mousePos;
+        gridScaler.addMoveListener();
         break;
       case "AdjustXTool":
         gridScaler.setNewXOffset(mousePos);
@@ -111,40 +115,35 @@ class ScaleGridLayer extends CanvasLayer {
       case "AdjustYTool":
         gridScaler.setNewYOffset(mousePos);
         break;
-      case "DrawSquareTool":
-      case "Draw3x3Tool":
-      case "DrawHexTool":
-        gridScaler.ogMouseCoords = mousePos;
-        gridScaler.addMoveListener();
+      case "ResetGridTool":
         break;
       default:
         //If something gets here then one or more listener enabler/disabler didnt work.
         gridScaler.removeListeners();
-        console.log("Grid Scale | Drawing Layer | &&^^NO mouse expression matched^^&&")
+        gridUtils.log("&&^^NO mouse expression matched^^&&")
     }
   }
 
   // Should only be active for drawing the grid square. But in case it is active at some other point
   // there is an if statement that checks for the active tool and whether it needs to be drawn.
   gridOnMouseMove(_) {
-    const ogMousePos = gridScaler.ogMouseCoords;
-    const mousePos = gridScaler.getMousePos();
+    if (!gridScaler.needsDrawn) {
+      return;
+    }
 
-    if (gridScaler.currentTool == "DrawHexTool"
-      || gridScaler.currentTool == "Draw3x3Tool"
-      || gridScaler.currentTool == "DrawSquareTool"
-      && gridScaler.needsDrawn == true) {
-      if (gridScaler.currentTool == "DrawHexTool") {
-        gridScaler.configureHexGrid(ogMousePos, mousePos)
-      }
-      else {
-        gridScaler.configureSquareGrid(ogMousePos, mousePos)
-      }
+    const ogMousePos = gridScaler.ogMouseCoords;
+    const mousePos = gridUtils.getMousePos();
+
+    if (gridScaler.currentTool == "DrawHexTool") {
+      gridScaler.configureHexGrid(ogMousePos, mousePos)
+    } else if (gridScaler.currentTool == "Draw3x3Tool"
+      || gridScaler.currentTool == "DrawSquareTool") {
+      gridScaler.configureSquareGrid(ogMousePos, mousePos)
     }
   }
 
   // Used after finishing drawing the square.
-  gridOnMouseUp(_) {
+  gridOnMouseUp(evt) {
     gridScaler.removeListeners();
 
     // Resets some things, clears the square and switch on the game listeners.
@@ -156,25 +155,8 @@ class ScaleGridLayer extends CanvasLayer {
       } else {
         gridScaler.needsDrawn = false;
         gridScaler.setGrid();
-        gridScaler.ogMouseCoords = null;
       }
     }
-  }
-
-  getMousePos(e) {
-    console.log("Grid Scale | Getting mouse position");
-
-    const mouse = canvas.app.renderer.plugins.interaction.mouse.global;
-    const t = canvas.stage.worldTransform;
-
-    function calcCoord(axis) {
-      return (mouse[axis] - t['t' + axis]) / canvas.stage.scale[axis];
-    }
-
-    return {
-      x: calcCoord('x'),
-      y: calcCoord('y')
-    };
   }
 
   // <================== Start Setup Functions  ====================>
@@ -217,34 +199,43 @@ class ScaleGridLayer extends CanvasLayer {
   }
 
   initializeDrawGrid() {
-    gridScaler.dataCoords = null;
+    gridScaler.drawCoords = null;
     gridScaler.needsDrawn = true;
     canvas.stage.addListener('mousedown', gridScaler.gridOnMouseDown);
   }
 
   // <================== Start Pixi Setup Functions  ====================>
 
+  initializePixi() {
+    gridScaler.pixiGraphics = canvas.controls.addChild(new PIXI.Graphics());
+  }
+
   // Sets up the data for drawing the square when given mouse position. Enforces drawing a square, not a rectange.
   configureSquareGrid(ogMousePos, mousePos) {
-    const width = Math.abs(ogMousePos.x - mousePos.x) * (ogMousePos.x < mousePos.x ? -1 : 1);
-    const height = Math.abs(width) * (ogMousePos.y < mousePos.y ? -1 : 1);
-    const coords = [
-      ogMousePos.x > mousePos.x ? mousePos.x : ogMousePos.x,
-      ogMousePos.y > mousePos.y ? mousePos.y : ogMousePos.y,
-      Math.abs(width), Math.abs(height)];
+    const size = Math.abs(ogMousePos.x - mousePos.x);
+    let x = ogMousePos.x;
+    let y = ogMousePos.y;
 
-    gridScaler.drawBox(coords);
-    gridScaler.dataCoords = coords;
+    // Make sure the square is always anchored around the original mouse click.
+    if (mousePos.x < ogMousePos.x) {
+      x = ogMousePos.x - size;
+    }
+
+    if (mousePos.y < ogMousePos.y) {
+      y = ogMousePos.y - size;
+    }
+
+    const coords = [x, y, size, size];
+    gridScaler.drawCoords = coords;
+    gridScaler.drawSquareGrid(coords);
   }
 
-  // Draws the box requested using pixi graphics. First it clears the previous square then sets fill color 
-  // and line style then draws the new one from the given coords.
-  drawBox(t) {
-    this.pixiGraphics.clear().beginFill(0x208000, 0.3).lineStyle(1, 0x66ff33, .9, 0).drawRect(...t);
-  }
-
-  initializePixi() {
-    this.pixiGraphics = canvas.controls.addChild(new PIXI.Graphics());
+  drawSquareGrid(coords) {
+    gridScaler.pixiGraphics
+      .clear()
+      .beginFill(0x208000, 0.3)
+      .lineStyle(1, 0x66ff33, .9, 0)
+      .drawRect(...coords);
   }
 
   // Sets up the data for drawing the hex grid.
@@ -259,8 +250,8 @@ class ScaleGridLayer extends CanvasLayer {
         ogMousePos.x > mousePos.x ? mousePos.x : ogMousePos.x,
         Math.abs(height), Math.abs(width)];
 
-      gridScaler.setVerticalHexGrid(coords[1], coords[0], coords[2], coords[3])
-      gridScaler.dataCoords = coords;
+      gridScaler.drawCoords = coords;
+      gridScaler.drawVerticalHexGrid(coords[1], coords[0], coords[2], coords[3])
     }
     else {
       const width = Math.abs(ogMousePos.x - mousePos.x) * (ogMousePos.x < mousePos.x ? -1 : 1);
@@ -270,13 +261,12 @@ class ScaleGridLayer extends CanvasLayer {
         ogMousePos.y > mousePos.y ? mousePos.y : ogMousePos.y,
         Math.abs(width), Math.abs(height)];
 
-      gridScaler.setHorizontalHexGrid(coords[0], coords[1], coords[2], coords[3])
-      gridScaler.dataCoords = coords;
+      gridScaler.drawCoords = coords;
+      gridScaler.drawHorizontalHexGrid(coords[0], coords[1], coords[2], coords[3])
     }
   }
 
-  //This is the setup for a horizontal (flat) hex grid. Found the equations here (https://rechneronline.de/pi/hexagon.php)
-  setHorizontalHexGrid(x, y, w, h) {
+  drawHorizontalHexGrid(x, y, w, h) {
     const d = w;
     const a = d / 2;
     const eH = Math.sqrt(3) / 2 * a
@@ -293,8 +283,7 @@ class ScaleGridLayer extends CanvasLayer {
     gridScaler.pixiGraphics.clear().beginFill(0x478a94, 0.3).lineStyle(1, 0x7deeff, .9, 0).drawPolygon(whattf);
   }
 
-  // Sets up a vertical (pointy) hex grid.
-  setVerticalHexGrid(x, y, w, h) {
+  drawVerticalHexGrid(x, y, w, h) {
     const d = h;
     const a = d / 2;
     const eH = Math.sqrt(3) / 2 * a
@@ -356,10 +345,6 @@ class ScaleGridLayer extends CanvasLayer {
 
   // <================== Start Grid Setting Functions  ====================>
 
-  /**
-   * this function takes in a mouse click then calls getTopLeft
-   * to find the top left corner of the grid square that the click was in then gets the offset in a positive number.
-   */
   async setNewXOffset(mousePos) {
     // Added the logic so it wont constantly shift in the positive direction. Instead finds the closest side the clicked point and will move the grid in either + or - to get there.
 
@@ -501,10 +486,11 @@ class ScaleGridLayer extends CanvasLayer {
 
   // Safely set the grid size for the canvas. Foundry expects the size to be an integer and at
   // least 50 pixels. If the value is less that 50, adjust the size of the map to compensate.
-  async setGridSize(size) {
-    const safeSize = Math.round(size);
+  async setGridSize(data) {
+    const safeSize = Math.round(data.grid);
 
 
+    // <--- temp code for updating grid without causing the screen to blank out --->
     // const d = Canvas.getDimensions({
     //   width: 4096,
     //   height: 4096,
@@ -525,29 +511,23 @@ class ScaleGridLayer extends CanvasLayer {
     // canvas.stage.hitArea = new PIXI.Rectangle(0, 0, d.width, d.height);
 
     // if (canvas.ready) {
-    //   // await canvas.draw(); // this is what updates the grid on save.
+    //   await canvas.draw(); // this is what updates the grid on save.
     // }
 
 
-    if (size < 50) {
-      await gridScaler.adjustMapScale(safeSize);
-      // Assume the size is now 50, since that's what the map was adjusted to.
-      safeSize = 50;
+    if (safeSize < 50) {
+      const adjustedData = gridUtils.getAdjustedSceneSize(safeSize);
+      data.grid = adjustedData.grid;
+      data.width = adjustedData.width;
+      data.height = adjustedData.height;
+    } else {
+      data.grid = safeSize;
     }
 
     const scene = game.scenes.get(canvas.scene.data._id);
-    await scene.update({ grid: safeSize });
+    await scene.update(data);
 
-    gridUtils.printLog(`The grid was set to ${safeSize}.`);
-  }
-
-  async adjustMapScale(size) {
-    const scene = game.scenes.get(canvas.scene.data._id);
-    const adjustment = 50 / size;
-    const heightAdjust = Math.round(canvas.scene.data.height * adjustment)
-    const widthAdjust = Math.round(canvas.scene.data.width * adjustment)
-
-    await scene.update({ grid: 50, width: widthAdjust, height: heightAdjust });
+    gridUtils.log(`The grid was set to ${data.grid}.`);
   }
 
   async setDatYOffset(p1, p2, mousePos) {
@@ -557,8 +537,8 @@ class ScaleGridLayer extends CanvasLayer {
     const magicNumber = gridUtils.findTheBest(p1, p2, mousePos.y, gridSize);
     const finalOffset = Math.round(yOffset + magicNumber[0]);
 
-    await scene.update({ shiftY: finalOffset });      //this will update the current scene, this time it is the xOffset
-    gridUtils.printOperationLog("Y Offset", finalOffset);
+    await scene.update({ shiftY: finalOffset });
+    gridUtils.logOperation("Y Offset", finalOffset);
   }
 
   async setDatXOffset(p1, p2, mousePos) {
@@ -570,56 +550,177 @@ class ScaleGridLayer extends CanvasLayer {
     // Need to round the number because Foundry doesn't accept non-integers.
     const finalOffset = Math.round(xOffset + magicNumber[0]);
 
-    await scene.update({ shiftX: finalOffset });      //this will update the current scene, this time it is the xOffset
-    gridUtils.printOperationLog("X Offset", finalOffset);
+    await scene.update({ shiftX: finalOffset });
+    gridUtils.logOperation("X Offset", finalOffset);
   }
 
   // Resets the grid to a 100px grid with 0 X/Y Offset, also sets the grid color to pink to make it easier to work with.
   async resetGrid() {
     gridScaler.removeListeners();
-    console.log("Grid Scale | Drawing Layer | ^^^^^ Resetting Grid ^^^^^");
+    gridUtils.log("Resetting Grid");
     const scene = game.scenes.get(canvas.scene.data._id);
 
     await scene.update({ grid: 100, shiftX: 0, shiftY: 0, gridColor: "#ff09c1", gridAlpha: 1 });
   }
 
-  // Sets the grid square size. Then depending on the selected tool, may adjust the offset in X/Y.
   async setGrid() {
-    this.pixiGraphics.clear();
+    gridScaler.removeListeners();
+    gridScaler.pixiGraphics.clear();
 
-    if (gridScaler.dataCoords) {
-      const canvasW = canvas.dimensions.height;
-      const canvasH = canvas.dimensions.width;
-      gridScaler.preGridScale = [canvasH, canvasW];
-
-      let gridSize = gridScaler.dataCoords[3];
+    if (gridScaler.drawCoords) {
+      let gridSize = gridScaler.drawCoords[3];
+      let sceneWidth = canvas.dimensions.sceneWidth;
+      let sceneHeight = canvas.dimensions.sceneHeight;
+      let adjustmentRatio = 1;
 
       if (gridScaler.currentTool == "Draw3x3Tool") {
-        gridSize = gridSize / 3;
+        gridSize /= 3;
       }
 
-      await gridScaler.setGridSize(gridSize);
+      // If the grid size ends up being less than 50 we need to make it 50 and adjust 
+      // the scene (map) size to compensate. Foundry doesn't accept grid sizes less than 50.
+      if (gridSize < 50) {
+        const adjustedData = gridUtils.getAdjustedSceneSize(gridSize);
+        adjustmentRatio = adjustedData.adjustment;
+        gridSize = adjustedData.grid;
+        sceneWidth = adjustedData.width;
+        sceneHeight = adjustedData.height;
+      }
 
-      gridScaler.removeListeners();
-      gridScaler.currentTool = null;
+      // Need to take into account the current shift and padding values, along with the 
+      // adjustment ratio from above if needed, when setting the starting location
+      let gridX = (gridScaler.drawCoords[0] + canvas.dimensions.shiftX - canvas.dimensions.paddingX) * adjustmentRatio;
+      let gridY = (gridScaler.drawCoords[1] + canvas.dimensions.shiftY - canvas.dimensions.paddingY) * adjustmentRatio;
+
+      // Go left and up from the top left of the box until we pass the left/top side 
+      // of the scene. That'll be the amount we need to shift the grid by.
+      while (gridX > 0) {
+        gridX -= gridSize;
+      }
+
+      while (gridY > 0) {
+        gridY -= gridSize;
+      }
+
+      let shiftX = gridX;
+      let shiftY = gridY;
+
+      // We know the shift values are negative at this point, but check to see if 
+      // it makes sense to switch to a smaller positive offset instead.
+      if (gridSize - Math.abs(gridX) < Math.abs(gridX)) {
+        shiftX = gridSize + gridX;
+      }
+
+      if (gridSize - Math.abs(gridY) < Math.abs(gridY)) {
+        shiftY = gridSize + gridY;
+      }
+
+      // Update the scene with the new data.
+      const gridData = {
+        grid: Math.round(gridSize),
+        shiftX: Math.round(shiftX),
+        shiftY: Math.round(shiftY),
+        width: Math.round(sceneWidth),
+        height: Math.round(sceneHeight)
+      }
+
+      const scene = game.scenes.get(canvas.scene.data._id);
+      await scene.update(gridData);
     }
+
+    gridScaler.currentTool = null;
   }
 
-  // Sets the hex size.
+  // Sets the grid, with appropriate offset.
+  // Usual hex information for coming up with hex part ratios: https://hexagoncalculator.apphb.com/
+  //  --  Edge length: 0.5
+  // /  \
+  // \  / Diameter (point to point): 1
+  //  --  Top to bottom length: 0.866
   async setHexGrid(_) {
-    this.pixiGraphics.clear();
+    gridScaler.removeListeners();
+    gridScaler.pixiGraphics.clear();
 
-    if (gridScaler.dataCoords) {
-      const adjY1 = canvas.dimensions.height;
-      const adjX1 = canvas.dimensions.width;
-      gridScaler.preGridScale = [adjX1, adjY1];
+    if (gridScaler.drawCoords) {
+      const gridType = canvas.scene.data.gridType
+      let gridSize = gridScaler.drawCoords[3];
+      let sceneWidth = canvas.dimensions.sceneWidth;
+      let sceneHeight = canvas.dimensions.sceneHeight;
+      let adjustmentRatio = 1;
 
-      const gridPix = gridScaler.dataCoords[3];
-      await gridScaler.setGridSize(gridPix);
+      // If the grid size ends up being less than 50 we need to make it 50 and adjust 
+      // the scene (map) size to compensate. Foundry doesn't accept grid sizes less than 50.
+      if (gridSize < 50) {
+        const adjustedData = gridUtils.getAdjustedSceneSize(gridSize);
+        adjustmentRatio = adjustedData.adjustment;
+        gridSize = adjustedData.grid;
+        sceneWidth = adjustedData.width;
+        sceneHeight = adjustedData.height;
+      }
 
-      gridScaler.removeListeners();
-      gridScaler.currentTool = null;
+      // Need to take into account the current shift and padding values, along with the 
+      // adjustment ratio from above if needed, when setting the starting location
+      let gridX = (gridScaler.drawCoords[0] + canvas.dimensions.shiftX - canvas.dimensions.paddingX) * adjustmentRatio;
+      let gridY = (gridScaler.drawCoords[1] + canvas.dimensions.shiftY - canvas.dimensions.paddingY) * adjustmentRatio;
+
+      let tempGridSize = gridSize * 0.8660258075690656;
+
+      // Go left and up from the top left of the box until we pass the left/top side 
+      // of the scene. That'll be the amount we need to shift the grid by.
+      let moveCount = 0;
+
+      while (gridX > 0) {
+        if (gridType == 2 || gridType == 3) {
+          gridX -= tempGridSize;
+        } else {
+          // let shouldHalf = moveCount % 2 == 0;
+          // gridX -= shouldHalf ? gridSize / 2 : gridSize;
+          moveCount++;
+          gridX -= gridSize / 4
+        }
+      }
+
+      while (gridY > 0) {
+        if (gridType == 2 || gridType == 3) {
+          gridY -= gridSize;
+        } else {
+          gridY -= tempGridSize;
+        }
+      }
+
+      let shiftX = gridX;
+      let shiftY = gridY;
+
+      // We know the shift values are negative at this point, but check to see if 
+      // it makes sense to switch to a smaller positive offset instead.
+      if (gridSize - Math.abs(gridX) < Math.abs(gridX)) {
+        shiftX = gridSize + gridX;
+      }
+
+      if (gridSize - Math.abs(gridY) < Math.abs(gridY)) {
+        shiftY = gridSize + gridY;
+      }
+
+      shiftX = gridX - ((gridSize / 4) * (moveCount % 4));
+
+      console.log(`size: ${gridSize}`);
+      console.log(`shift X:${shiftX} Y:${shiftY}`);
+      console.log(`modulo: ${moveCount % 4}`);
+
+      // Update the scene with the new data.
+      const gridData = {
+        grid: Math.round(gridSize),
+        shiftX: Math.round(shiftX),
+        shiftY: Math.round(shiftY),
+        width: Math.round(sceneWidth),
+        height: Math.round(sceneHeight)
+      }
+
+      const scene = game.scenes.get(canvas.scene.data._id);
+      await scene.update(gridData);
     }
+
+    gridScaler.currentTool = null;
   }
 
   // <================== Message Functions  ====================>
@@ -664,11 +765,11 @@ class ScaleGridLayer extends CanvasLayer {
           label: "OK",
           callback: async dlg => {
             const form = dlg.find('#grid-scaler-set-grid')[0];
-            const gridCount = parseInt(form.querySelector("#grid-count").value);
+            const gridCount = parseFloat(form.querySelector("#grid-count").value);
             const gridSize = await gridUtils.getGridSizeByCount(gridCount);
 
             if (gridSize > 0) {
-              await gridScaler.setGridSize(gridSize);
+              await gridScaler.setGridSize({ grid: gridSize });
             }
           }
         }
@@ -688,14 +789,14 @@ class ScaleGridLayer extends CanvasLayer {
     }
   }
 
-  // Turn the grid pink and make it fully opaque and visible.
+  // Turn the grid red and make it fully opaque and visible.
   async makeGridVisible(sceneId) {
     const curScene = game.scenes.get(sceneId);
     canvas.grid.visible = true;
 
     await curScene.update({
       gridAlpha: 1,
-      gridColor: "#ff09c1" // pink
+      gridColor: "#ff0000"
     });
   }
 
@@ -751,4 +852,4 @@ gridScaler.initialize();
 // Add a releaseAll function to the GridLayer class so it can pass through the Canvas.tearDown method -- to be fixed in a future Foundry release
 GridLayer.prototype.releaseAll = function () { };
 
-console.log("Grid Scale | ** Finished Loading **");
+gridUtils.log("** Finished Loading **");
