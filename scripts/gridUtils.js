@@ -97,6 +97,54 @@ export class gridUtils {
     }
   }
 
+  // Updates the grid without actually saving it to the scene. This is taken and modified fron grid-config.js in Foundry.
+  static refreshGrid({
+    background = false,
+    grid = false,
+    shiftX = null,
+    shiftY = null,
+    size = null, // can't be smaller than 50
+    gridAlpha = 1.0,
+    gridColor = "#FF0000" } = {}) {
+
+    const bg = canvas.background.bg;
+    const fg = canvas.foreground.bg;
+
+    // Establish new Scene dimensions
+    const d = Canvas.getDimensions({
+      width: canvas.scene.data.width,
+      height: canvas.scene.data.height,
+      padding: canvas.scene.data.padding,
+      grid: size ?? canvas.dimensions.size,
+      gridDistance: canvas.dimensions.distance,
+      shiftX: shiftX ?? canvas.dimensions.shiftX,
+      shiftY: shiftY ?? canvas.dimensions.shiftY
+    });
+    
+    canvas.dimensions = d;
+
+    // Update the background and foreground sizing
+    if (background && bg) {
+      bg.position.set(d.paddingX - d.shiftX, d.paddingY - d.shiftY);
+      bg.width = d.sceneWidth;
+      bg.height = d.sceneHeight;
+      grid = true;
+    }
+
+    if (background && fg) {
+      fg.position.set(d.paddingX - d.shiftX, d.paddingY - d.shiftY);
+      fg.width = d.sceneWidth;
+      fg.height = d.sceneHeight;
+    }
+
+    // Update the grid layer
+    if (grid) {
+      canvas.grid.tearDown();
+      canvas.grid.draw({ type: canvas.scene.data.gridType, dimensions: d, gridColor: gridColor.replace("#", "0x"), gridAlpha: gridAlpha });
+      canvas.stage.hitArea = new PIXI.Rectangle(0, 0, d.width, d.height);
+    }
+  }
+
   // SCENE UTILS
   ////////////////////////////////////////////////////
   static getAdjustedSceneSize(gridSize) {

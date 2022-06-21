@@ -14,49 +14,50 @@ class ScaleGridLayer extends CanvasLayer {
   };
 
   // <================== Button Setup ====================>
-
   setButtons() {
     gridScaler.newButtons = {
       activeTool: "GridScaler",
       name: "grid",
-      icon: "fas fa-wrench",
+      icon: "fas fa-border-all",
       layer: "grid",
       title: "Grid Controls",
       tools: [
         {
-          icon: "fas fa-edit",
+          icon: "fas fa-square",
           name: "DrawGridTool",
-          title: "Configure the grid by drawing either a square or hexagon",
+          title: "Set grid by drawing either a square or hexagon",
           onClick: gridScaler.setupDrawGrid
+        },
+        {
+          icon: "fas fa-th",
+          name: "Draw3x3Tool",
+          title: "Set grid by drawing a 3x3 box",
+          onClick: gridScaler.setupDraw3X3
         },
         {
           icon: "fas fa-ruler-horizontal",
           name: "AdjustXTool",
-          title: "Adjust the X position of the grid",
+          title: "Set the X position of the grid",
           onClick: gridScaler.setupAdjustX
         },
         {
           icon: "fas fa-ruler-vertical",
           name: "AdjustYTool",
-          title: "Adjust the Y position of the grid",
+          title: "Set the Y position of the grid",
           onClick: gridScaler.setupAdjustY
         },
         {
-          icon: "fas fa-th",
-          name: "Draw3x3Tool",
-          title: "Configure grid by drawing a 3x3 box",
-          onClick: gridScaler.setup3X3
+          icon: "fas fa-object-group",
+          name: "MoveGridTool",
+          title: "Move and scale the grid",
+          onClick: gridScaler.openGridMoveDialog
         },
         {
-          icon: 'fas fa-table',
+          icon: 'fas fa-pen-square',
           name: "ManualGridSizeTool",
-          title: "Configure the grid with Known X/Y Squares",
-          onClick: gridScaler.promptForGridSize
+          title: "Set the grid by number of squares or hexes",
+          onClick: gridScaler.openGridSizeDialog
         },
-        // Sometimes the map you're using already has a grid printed on it, so you want the Foundry grid
-        // to be fully transparent or just really light. In those cases, it's a pain to manually configure 
-        // the settings to make it easier to see while you line up the Foundry grid. This lets you toggle 
-        // an easy to see grid temporarily to make the job easier.
         {
           icon: 'fas fa-border-none',
           name: "ToogleGridTool",
@@ -66,7 +67,7 @@ class ScaleGridLayer extends CanvasLayer {
         {
           icon: "fas fa-undo",
           name: "ResetGridTool",
-          title: "Reset Grid",
+          title: "Reset the grid",
           onClick: e => {
             this.resetDialog(e);
           }
@@ -156,6 +157,10 @@ class ScaleGridLayer extends CanvasLayer {
         gridScaler.needsDrawn = false;
         gridScaler.setGrid();
       }
+
+      // Open the dialog that let's you manually adjust the drig after drawing,
+      // since you rarely get it exact and need to do some fine tuning anyway.
+      // gridScaler.openGridMoveWindow();
     }
   }
 
@@ -193,7 +198,7 @@ class ScaleGridLayer extends CanvasLayer {
     gridScaler.initializeDrawGrid();
   }
 
-  setup3X3() {
+  setupDraw3X3() {
     gridScaler.currentTool = "Draw3x3Tool"
     gridScaler.initializeDrawGrid();
   }
@@ -489,32 +494,6 @@ class ScaleGridLayer extends CanvasLayer {
   async setGridSize(data) {
     const safeSize = Math.round(data.grid);
 
-
-    // <--- temp code for updating grid without causing the screen to blank out --->
-    // const d = Canvas.getDimensions({
-    //   width: 4096,
-    //   height: 4096,
-    //   padding: 0.25,
-    //   grid: safeSize,
-    //   gridDistance: 5,
-    //   shiftX: 0,
-    //   shiftY: 0
-    // });
-
-    // canvas.dimensions = d;
-    // await canvas.grid.tearDown();
-    // await canvas.grid.draw({
-    //   type: 1, 
-    //   dimensions: d, 
-    //   gridColor: 0xFF0000, 
-    //   gridAlpha: 1.0});
-    // canvas.stage.hitArea = new PIXI.Rectangle(0, 0, d.width, d.height);
-
-    // if (canvas.ready) {
-    //   await canvas.draw(); // this is what updates the grid on save.
-    // }
-
-
     if (safeSize < 50) {
       const adjustedData = gridUtils.getAdjustedSceneSize(safeSize);
       data.grid = adjustedData.grid;
@@ -554,13 +533,12 @@ class ScaleGridLayer extends CanvasLayer {
     gridUtils.logOperation("X Offset", finalOffset);
   }
 
-  // Resets the grid to a 100px grid with 0 X/Y Offset, also sets the grid color to pink to make it easier to work with.
+  // Resets the grid to a 100px grid with 0 X/Y Offset.
   async resetGrid() {
     gridScaler.removeListeners();
     gridUtils.log("Resetting Grid");
     const scene = game.scenes.get(canvas.scene.data._id);
-
-    await scene.update({ grid: 100, shiftX: 0, shiftY: 0, gridColor: "#ff09c1", gridAlpha: 1 });
+    await scene.update({ grid: 100, shiftX: 0, shiftY: 0 });
   }
 
   async setGrid() {
@@ -723,9 +701,101 @@ class ScaleGridLayer extends CanvasLayer {
     gridScaler.currentTool = null;
   }
 
-  // <================== Message Functions  ====================>
+  // <================== Dialogs  ====================>
 
-  // Renders a dialog to confirm the user wants to reset the grid
+  async openGridMoveDialog() {
+    const templatePath = 'modules/scaleGrid/templates/gridMove.html';
+    const html = await renderTemplate(templatePath, null);
+    let shiftX = canvas.dimensions.shiftX;
+    let shiftY = canvas.dimensions.shiftY;
+    let size = canvas.dimensions.size;
+
+    gridScaler.toggleGrid();
+
+    new Dialog({
+      title: "Move and Scale Grid ",
+      content: html,
+      buttons: {
+        save: {
+          icon: '<i class="fas fa-save"></i>',
+          label: "Save Changes",
+          callback: async _ => {
+            const scene = game.scenes.get(canvas.scene.data._id);
+            await scene.update({
+              shiftX: shiftX,
+              shiftY: shiftY,
+              grid: size
+            });
+          }
+        },
+        reset: {
+          icon: '<i class="fas fa-sync"></i>',
+          label: "Discard Changes",
+          callback: async _ => {
+            if (canvas.ready) await canvas.draw();
+          }
+        }
+      },
+      default: "save",
+      render: html => {
+        html.find("#move-right").click(() => {
+          shiftX += 1;
+          gridUtils.refreshGrid({ background: true, shiftX: shiftX, shiftY: shiftY, size: size })
+        });
+        html.find("#move-left").click(() => {
+          shiftX -= 1;
+          gridUtils.refreshGrid({ background: true, shiftX: shiftX, shiftY: shiftY, size: size })
+        });
+        html.find("#move-up").click(() => {
+          shiftY -= 1;
+          gridUtils.refreshGrid({ background: true, shiftX: shiftX, shiftY: shiftY, size: size })
+        });
+        html.find("#move-down").click(() => {
+          shiftY += 1;
+          gridUtils.refreshGrid({ background: true, shiftX: shiftX, shiftY: shiftY, size: size })
+        });
+        html.find("#expand-grid").click(() => {
+          size += 1;
+          gridUtils.refreshGrid({ background: true, shiftX: shiftX, shiftY: shiftY, size: size })
+        });
+        html.find("#contract-grid").click(() => {
+          size -= 1;
+          gridUtils.refreshGrid({ background: true, shiftX: shiftX, shiftY: shiftY, size: size })
+        });
+      },
+      close: () => {
+        gridScaler.toggleGrid();
+        ui.notifications.info("dialog closed");
+      }
+    }).render(true);
+  }
+
+  // Renders a dialog that lets the user enter known X/Y values.
+  async openGridSizeDialog() {
+    const templatePath = 'modules/scaleGrid/templates/known-xy.html';
+    const html = await renderTemplate(templatePath, null);
+
+    new Dialog({
+      title: "Set Grid Size ",
+      content: html,
+      buttons: {
+        create: {
+          icon: '<i class="fas fa-check"></i>',
+          label: "OK",
+          callback: async html => {
+            const form = html.find('#grid-scaler-set-grid')[0];
+            const gridCount = parseFloat(form.querySelector("#grid-count").value);
+            const gridSize = await gridUtils.getGridSizeByCount(gridCount);
+
+            if (gridSize > 0) {
+              await gridScaler.setGridSize({ grid: gridSize });
+            }
+          }
+        }
+      }
+    }).render(true);
+  }
+
   resetDialog(_) {
     const confirmDialog = new Dialog({
       height: 800,
@@ -751,52 +821,31 @@ class ScaleGridLayer extends CanvasLayer {
     confirmDialog.render(true);
   }
 
-  // Renders a dialog that lets the user enter known X/Y values.
-  async promptForGridSize() {
-    const templatePath = 'modules/scaleGrid/templates/known-xy.html';
-    const html = await renderTemplate(templatePath, null);
+  // <================== Toggle Grid  ====================>
 
-    new Dialog({
-      title: "Set Grid Size ",
-      content: html,
-      buttons: {
-        create: {
-          icon: '<i class="fas fa-check"></i>',
-          label: "OK",
-          callback: async dlg => {
-            const form = dlg.find('#grid-scaler-set-grid')[0];
-            const gridCount = parseFloat(form.querySelector("#grid-count").value);
-            const gridSize = await gridUtils.getGridSizeByCount(gridCount);
-
-            if (gridSize > 0) {
-              await gridScaler.setGridSize({ grid: gridSize });
-            }
-          }
-        }
-      }
-    }).render(true);
-  }
-
-  // Switch between the current grid settings and the preview grid settings.
-  async toggleGrid() {
+  // Sometimes the map you're using already has a grid printed on it, so you want the Foundry grid
+  // to be fully transparent or just really light. In those cases, it's a pain to manually configure 
+  // the settings to make it easier to see while you line up the Foundry grid. This lets you toggle 
+  // an easy to see grid temporarily to make the job easier.
+  toggleGrid() {
     const curSceneId = canvas.scene.data._id;
 
     if (!gridScaler.cavasGridTempSettings[curSceneId]) {
       gridScaler.saveGridSettings(curSceneId);
-      await gridScaler.makeGridVisible(curSceneId);
+      gridScaler.makeGridVisible();
     } else {
-      await gridScaler.resetGridSettings(curSceneId);
+      gridScaler.resetGridSettings(curSceneId);
     }
   }
 
   // Turn the grid red and make it fully opaque and visible.
-  async makeGridVisible(sceneId) {
-    const curScene = game.scenes.get(sceneId);
+  makeGridVisible() {
     canvas.grid.visible = true;
 
-    await curScene.update({
+    gridUtils.refreshGrid({
+      grid: true,
       gridAlpha: 1,
-      gridColor: "#ff0000"
+      gridColor: "#FF0000"
     });
   }
 
@@ -807,26 +856,29 @@ class ScaleGridLayer extends CanvasLayer {
 
     gridScaler.cavasGridTempSettings[sceneId] = {
       visible: canvas.grid.visible,
-      data: {
-        gridAlpha: curScene.data.gridAlpha,
-        gridColor: curScene.data.gridColor
-      }
+      gridAlpha: curScene.data.gridAlpha,
+      gridColor: curScene.data.gridColor
     };
   }
 
   // Set the grid's color and alpha back to their original settings.
-  async resetGridSettings(sceneId) {
+  resetGridSettings(sceneId) {
     const settings = gridScaler.cavasGridTempSettings[sceneId];
 
     if (settings) {
-      const curScene = game.scenes.get(canvas.scene.data._id);
-
       canvas.grid.visible = settings.visible;
-      await curScene.update(settings.data)
+
+      gridUtils.refreshGrid({
+        grid: true,
+        gridAlpha: settings.gridAlpha,
+        gridColor: settings.gridColor
+      });
 
       gridScaler.cavasGridTempSettings[sceneId] = null;
     }
   }
+
+  // <================== Initialize  ====================>
 
   // Initialize the ScaleGridLayer. Attach the button to the controls, draw the square, and the draw text.
   initialize() {
@@ -842,9 +894,8 @@ class ScaleGridLayer extends CanvasLayer {
     });
   }
 
-} // ends extendedCanvas class
+}
 
-// Initialize
 const gridScaler = new ScaleGridLayer();
 gridScaler.setButtons();
 gridScaler.initialize();
