@@ -7,33 +7,35 @@
 
 ## How to Use
 
-Once the plugin is loaded a new wrench icon will appear below the main tool selection. Click on this to get to the Grid Scaler tools.  
-![tool-icon](https://user-images.githubusercontent.com/5131886/172427206-a8d667d6-3a41-4e0c-b83e-565def4ba2c0.jpg)
+Once the plugin is loaded a new wrench icon will appear below the main tool selection. Click on the Grid Scaler icon to get to the tools.  
+![tool-icon](https://user-images.githubusercontent.com/5131886/174724012-343697bb-e8da-48a8-acea-df36ba3ca0d2.jpg)  
 
-### Draw Single  
-![draw-icon](https://user-images.githubusercontent.com/5131886/172427358-1fe6bf83-cc63-4e00-b8f7-ddf4c6a4caee.jpg)  
+### Draw Square/Hex  
+![draw-icon](https://user-images.githubusercontent.com/5131886/174724067-c5e65450-6041-45aa-99e0-37f6d3142cc9.jpg)  
 This will let you draw a square or hex on the map then have the grid size set to match it.  No offset is applied with this and should be applied manually.  
 
-![Adjust Square Grid](https://i.imgur.com/q6ouG2k.gif)  
-![Draw Hex Fh](https://i.imgur.com/JuPqFoQ.gif)  
+![draw-square](https://user-images.githubusercontent.com/5131886/174725222-e5841a0a-bb0a-4f24-8030-8f0635850e11.gif)  
+![draw-hex2](https://user-images.githubusercontent.com/5131886/174726158-7a8a76cf-78a6-4e83-af7c-51fafb78f20a.gif)  
 
 ### Draw 3x3  
 ![3x3-icon](https://user-images.githubusercontent.com/5131886/172427631-08dba46f-3a9c-423d-9910-6c2aa2802364.jpg)  
 Draw a 3x3 grid square on the map then have the grid size set to match it. No offset is applied with this and should be applied manually.  
 
-![Adjust 3x3 Square Grid](https://i.imgur.com/kFdPVaa.gif)  
+![draw-3x3](https://user-images.githubusercontent.com/5131886/174724283-d8eb4720-20f0-4fb3-bad7-09357033419c.gif)
 
-### Adjust X Offset  
+### Set X Offset  
 ![x-offset-icon](https://user-images.githubusercontent.com/5131886/172427490-f187c2f7-1a67-45d4-99b4-2ecc0ee2d413.jpg)  
 When this is selected it will let you move the grid along the X plane. Clicking the button then clicking on a vertical line in one of your grid squares will adjust the grid to line up with that point.  
 
-![Adjust X](https://i.imgur.com/fadExiq.gif)  
-
-### Y Offset  
+### Set Y Offset  
 ![y-offset-icon](https://user-images.githubusercontent.com/5131886/172427540-fd06275a-1116-42ad-adf6-3fb371b6a72b.jpg)  
 When this is selected it will let you move the grid along the Y plane. Clicking the button then clicking on a horizontal line in one of your grid squares will adjust the grid to line up with that point. 
 
-![Adjust Y](https://i.imgur.com/2c41haj.gif)  
+### Move/Scale Grid  
+![move-scale-grid](https://user-images.githubusercontent.com/5131886/174724521-689d1023-3adf-48cf-9827-af9f328c28cf.jpg)  
+This allows you to manually set the grid size by entering the number of horizontal grid spaces across the map. Works best with maps where the grid covers the image entirely.  
+
+![move-scale-grid](https://user-images.githubusercontent.com/5131886/174724616-fecb4ea6-6329-4373-b8ab-1dbd9e27cbe0.gif)  
 
 ### Enter Grid Size  
 ![grid-siz-dialog-icon](https://user-images.githubusercontent.com/5131886/172427758-85b09710-614f-4d59-9d2f-b31f50bf937b.jpg)  
@@ -48,8 +50,7 @@ Changes the grid settings temporarily to make it fully opaque and pink. This is 
 This will set the grid to 100 pixels square with 0 X/Y offset. It also changes the grid color to pink to make it easier to see.  
 
 ## To Do
-- Add buttons to increase/decrease the grid size by small increments, since the drawing tools often need just a little bit of adjustment afterwards.
-- Auto-calculate the offset after using one of the draw tools. Could possibly get rid of the horizontal and vertical adjustment buttons then.
+- Auto-calculate the offset after using the hex draw tool. Could possibly get rid of the horizontal and vertical adjustment buttons then.
 - Add button to set to the current size and position of the map. Not exactly grid related, but I do this all the time and it sucks to have to go into the map config to do it.
 
 ## Notes and Mentions
