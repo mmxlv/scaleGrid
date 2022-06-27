@@ -710,6 +710,9 @@ class ScaleGridLayer extends CanvasLayer {
     let shiftY = canvas.dimensions.shiftY;
     let size = canvas.dimensions.size;
 
+    // Use the grid toggle code to make the grid temporarily visible.
+    const curSceneId = canvas.scene.data._id;
+    gridScaler.cavasGridTempSettings[curSceneId] = null;
     gridScaler.toggleGrid();
 
     new Dialog({
