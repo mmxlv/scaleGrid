@@ -1,12 +1,12 @@
 export class gridUtils {
   // LOG UTILS
   ////////////////////////////////////////////////////
-  static logOperation(desc, num) {
-    gridScaler.printLog(`The grid ${desc} was set to ${num}.`);
-  }
-
   static log(message) {
     console.log(`Grid Scale | ${message}`);
+  }
+
+  static logOperation(desc, num) {
+    gridUtils.log(`The grid ${desc} was set to ${num}.`);
   }
 
   // CANVAS UTILS
@@ -32,13 +32,14 @@ export class gridUtils {
     }
 
     const dimensions = canvas.dimensions;
-    const gridType = canvas.scene.data.gridType;
+    const gridType = canvas.grid.type;
     let size = 0;
 
     switch (gridType) {
       // If this is a square grid, or a hex grid with rows, assume the number is the horizontal cell count.
       case 1:
         size = dimensions.sceneWidth / gridCount;
+        break;
       case 2:
       case 3:
         // Find the width of the hex by dividing the number of hexes into the width of the scene.
@@ -63,7 +64,6 @@ export class gridUtils {
     const abs2 = p2 - p;
 
     if (Math.abs(abs1) < Math.abs(abs2)) {
-      console.log("Grid Scale | Drawing Layer | ^^^^^ ChoseABS1 ^^^^^");
       if (p1 < p) {
         arry = [Math.abs(abs1), -Math.abs(gridSize / 2)]
         return arry;
@@ -101,47 +101,44 @@ export class gridUtils {
   static refreshGrid({
     background = false,
     grid = false,
-    shiftX = null,
-    shiftY = null,
+    sceneX = null,
+    sceneY = null,
     size = null, // can't be smaller than 50
-    gridAlpha = 1.0,
-    gridColor = "#FF0000" } = {}) {
+    alpha = 1.0,
+    color = "#FF0000" } = {}) {
 
-    const bg = canvas.background.bg;
-    const fg = canvas.foreground.bg;
+    const d = canvas.grid.grid.options.dimensions;
 
-    // Establish new Scene dimensions
-    const d = Canvas.getDimensions({
-      width: canvas.scene.data.width,
-      height: canvas.scene.data.height,
-      padding: canvas.scene.data.padding,
-      grid: size ?? canvas.dimensions.size,
-      gridDistance: canvas.dimensions.distance,
-      shiftX: shiftX ?? canvas.dimensions.shiftX,
-      shiftY: shiftY ?? canvas.dimensions.shiftY
-    });
-    
-    canvas.dimensions = d;
+    d.size = size ?? d.size;
+    d.sceneX = sceneX ?? d.sceneX;
+    d.sceneY = sceneY ?? d.sceneY;
+
+    const bg = canvas.primary.background;
+    const fg = canvas.primary.foreground;
 
     // Update the background and foreground sizing
     if (background && bg) {
-      bg.position.set(d.paddingX - d.shiftX, d.paddingY - d.shiftY);
+      bg.position.set(d.sceneX, d.sceneY);
       bg.width = d.sceneWidth;
       bg.height = d.sceneHeight;
-      grid = true;
+      grid ||= {};
     }
 
     if (background && fg) {
-      fg.position.set(d.paddingX - d.shiftX, d.paddingY - d.shiftY);
+      fg.position.set(d.sceneX, d.sceneY);
       fg.width = d.sceneWidth;
       fg.height = d.sceneHeight;
     }
 
     // Update the grid layer
     if (grid) {
-      canvas.grid.tearDown();
-      canvas.grid.draw({ type: canvas.scene.data.gridType, dimensions: d, gridColor: gridColor.replace("#", "0x"), gridAlpha: gridAlpha });
-      canvas.stage.hitArea = new PIXI.Rectangle(0, 0, d.width, d.height);
+      canvas.grid.draw({
+        dimensions: d,
+        color: color.replace("#", "0x"),
+        alpha: alpha
+      });
+
+      canvas.stage.hitArea = d.rect;
     }
   }
 
@@ -152,6 +149,6 @@ export class gridUtils {
     const newHeight = Math.round(canvas.dimensions.sceneHeight * adjustment)
     const newWidth = Math.round(canvas.dimensions.sceneWidth * adjustment)
 
-    return { grid: 50, width: newWidth, height: newHeight, adjustment: adjustment };
+    return { size: 50, sceneWidth: newWidth, sceneHeight: newHeight, adjustment: adjustment };
   }
 }
