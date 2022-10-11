@@ -101,17 +101,25 @@ export class gridUtils {
   static refreshGrid({
     background = false,
     grid = false,
-    sceneX = null,
-    sceneY = null,
-    size = null, // can't be smaller than 50
+    offsetX = null,
+    offsetY = null,
+    offsetSize = null, // can't be smaller than 50
     alpha = 1.0,
-    color = "#FF0000" } = {}) {
+    color = "#FF0000"} = {}) {
 
     const d = canvas.grid.grid.options.dimensions;
 
-    d.size = size ?? d.size;
-    d.sceneX = sceneX ?? d.sceneX;
-    d.sceneY = sceneY ?? d.sceneY;
+    if (offsetSize) {
+      d.size += offsetSize;
+    }
+
+    if (offsetX) {
+      d.sceneX += offsetX;
+    }
+
+    if (offsetY) {
+      d.sceneY += offsetY;
+    }
 
     const bg = canvas.primary.background;
     const fg = canvas.primary.foreground;
@@ -130,9 +138,13 @@ export class gridUtils {
       fg.height = d.sceneHeight;
     }
 
+    if (!color) {
+      color = canvas.scene.grid.color;
+    }
+
     // Update the grid layer
     if (grid) {
-      canvas.grid.draw({
+      canvas.grid.grid.draw({
         dimensions: d,
         color: color.replace("#", "0x"),
         alpha: alpha

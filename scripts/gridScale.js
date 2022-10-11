@@ -213,18 +213,18 @@ class ScaleGridLayer extends CanvasLayer {
   }
 
   // Used after finishing drawing the square.
-  gridOnMouseUp(evt) {
+  async gridOnMouseUp(evt) {
     gridScaler.removeListeners();
 
     // Resets some things, clears the square and switch on the game listeners.
     if (gridScaler.needsDrawn == true) {
       if (gridScaler.currentTool == "DrawHexTool") {
         gridScaler.needsDrawn = false;
-        gridScaler.setHexGrid();
+        await gridScaler.setHexGrid();
         gridScaler.ogMouseCoords = null;
       } else {
         gridScaler.needsDrawn = false;
-        gridScaler.setGrid();
+        await gridScaler.setGrid();
       }
     }
   }
@@ -277,7 +277,9 @@ class ScaleGridLayer extends CanvasLayer {
   // <================== Start Pixi Setup Functions  ====================>
 
   initializePixi() {
-    gridScaler.pixiGraphics = canvas.controls.addChild(new PIXI.Graphics());
+    if (!gridScaler.pixiGraphics) {
+      gridScaler.pixiGraphics = canvas.controls.addChild(new PIXI.Graphics());
+    }
   }
 
   // Sets up the data for drawing the square when given mouse position. Enforces drawing a square, not a rectange.
@@ -416,9 +418,9 @@ class ScaleGridLayer extends CanvasLayer {
   // <================== Start Grid Setting Functions  ====================>
 
   async setNewXOffset(mousePos) {
-    let offsetX = canvas.scene.background.offsetX;
     const gridSize = canvas.dimensions.size;
     const gridType = canvas.grid.type;
+    let offsetX = canvas.scene.background.offsetX;
     let hexPValues = null;
 
     switch (gridType) {
@@ -587,7 +589,6 @@ class ScaleGridLayer extends CanvasLayer {
       let gridSize = gridScaler.drawCoords[3];
       let sceneWidth = canvas.dimensions.sceneWidth;
       let sceneHeight = canvas.dimensions.sceneHeight;
-      let adjustmentRatio = 1;
 
       if (gridScaler.currentTool == "Draw3x3Tool") {
         gridSize /= 3;
@@ -598,7 +599,6 @@ class ScaleGridLayer extends CanvasLayer {
       if (gridSize < 50) {
         gridUtils.logOperation("Adjusting grid size", gridSize)
         const adjustedData = gridUtils.getAdjustedSceneSize(gridSize);
-        adjustmentRatio = adjustedData.adjustment;
         gridSize = adjustedData.size;
         sceneWidth = adjustedData.sceneWidth;
         sceneHeight = adjustedData.sceneHeight;
@@ -701,12 +701,12 @@ class ScaleGridLayer extends CanvasLayer {
       // Update the scene with the new data.
       const gridData = {
         "grid.size": Math.round(gridSize),
-        dimensions: {
-          sceneX: Math.round(offsetX),
-          sceneY: Math.round(offsetY),
-          width: Math.round(sceneWidth),
-          height: Math.round(sceneHeight)
-        }
+        background: {
+          offsetX: Math.round(offsetX),
+          offsetY: Math.round(offsetY),
+        },
+        width: Math.round(sceneWidth),
+        height: Math.round(sceneHeight)
       }
 
       await canvas.scene.update(gridData);
@@ -720,9 +720,9 @@ class ScaleGridLayer extends CanvasLayer {
   async openGridMoveDialog() {
     const templatePath = 'modules/scaleGrid/templates/gridMove.html';
     const html = await renderTemplate(templatePath, null);
-    let sceneX = canvas.dimensions.sceneX;
-    let sceneY = canvas.dimensions.sceneY;
-    let size = canvas.dimensions.size;
+    let offsetX = 0;
+    let offsetY = 0;
+    let offsetSize = 0;
 
     // Use the grid toggle code to make the grid temporarily visible.
     gridScaler.cavasGridTempSettings[canvas.scene.id] = null;
@@ -736,12 +736,28 @@ class ScaleGridLayer extends CanvasLayer {
           icon: '<i class="fas fa-save"></i>',
           label: "Save Changes",
           callback: async _ => {
+            let sceneWidth = canvas.dimensions.sceneWidth;
+            let sceneHeight = canvas.dimensions.sceneHeight;
+            let gridSize = canvas.dimensions.size;
+
+            // If the grid size ends up being less than 50 we need to make it 50 and adjust 
+            // the scene (map) size to compensate. Foundry doesn't accept grid sizes less than 50.
+            if (gridSize < 50) {
+              gridUtils.logOperation("Adjusting grid size", gridSize)
+              const adjustedData = gridUtils.getAdjustedSceneSize(gridSize);
+              gridSize = adjustedData.size;
+              sceneWidth = adjustedData.sceneWidth;
+              sceneHeight = adjustedData.sceneHeight;
+            }
+
             await canvas.scene.update({
-              dimensions: {
-                sceneX: sceneX,
-                sceneY: sceneY,
-                size: size
-              }
+              "grid.size": gridSize,
+              background: {
+                offsetX: Math.round(canvas.scene.background.offsetX - offsetX),
+                offsetY: Math.round(canvas.scene.background.offsetY - offsetY),
+              },
+              width: Math.round(sceneWidth),
+              height: Math.round(sceneHeight)
             });
           }
         },
@@ -756,35 +772,54 @@ class ScaleGridLayer extends CanvasLayer {
       default: "save",
       render: html => {
         html.find("#move-right").click(() => {
-          sceneX -= 1;
-          gridUtils.refreshGrid({ background: true, sceneX: sceneX, sceneY: sceneY, size: size })
+          offsetX -= 1;
+          gridUtils.refreshGrid({ background: true, offsetX: -1, offsetY: 0, offsetSize: 0 })
         });
         html.find("#move-left").click(() => {
-          sceneX += 1;
-          gridUtils.refreshGrid({ background: true, sceneX: sceneX, sceneY: sceneY, size: size })
+          offsetX += 1;
+          gridUtils.refreshGrid({ background: true, offsetX: 1, offsetY: 0, offsetSize: 0 })
         });
         html.find("#move-up").click(() => {
-          sceneY += 1;
-          gridUtils.refreshGrid({ background: true, sceneX: sceneX, sceneY: sceneY, size: size })
+          offsetY += 1;
+          gridUtils.refreshGrid({ background: true, offsetX: 0, offsetY: 1, offsetSize: 0 })
         });
         html.find("#move-down").click(() => {
-          sceneY -= 1;
-          gridUtils.refreshGrid({ background: true, sceneX: sceneX, sceneY: sceneY, size: size })
+          offsetY -= 1;
+          gridUtils.refreshGrid({ background: true, offsetX: 0, offsetY: -1, offsetSize: 0 })
+        });
+        html.find("#expand-grid").mouseup(() => {
+          console.log(" mouse up ");
         });
         html.find("#expand-grid").click(() => {
-          size += 1;
-          gridUtils.refreshGrid({ background: true, sceneX: sceneX, sceneY: sceneY, size: size })
+          offsetSize += 1;
+          gridUtils.refreshGrid({ background: true, offsetX: 0, offsetY: 0, offsetSize: 1 })
+          gridScaler.refreshGridForGridMove(offsetX, offsetY)
         });
         html.find("#contract-grid").click(() => {
-          size -= 1;
-          gridUtils.refreshGrid({ background: true, sceneX: sceneX, sceneY: sceneY, size: size })
+          offsetSize -= 1;
+          gridUtils.refreshGrid({ background: true, offsetX: 0, offsetY: 0, offsetSize: -1 })
+          gridScaler.refreshGridForGridMove(offsetX, offsetY)
         });
       },
       close: () => {
         gridScaler.toggleGrid();
-        ui.notifications.info("dialog closed");
       }
     }).render(true);
+  }
+
+  // We want the background to stay relative to the grid cell it started in as the grid size is changing.
+  // There's probably an easier way to do this, but this is what I ended up with after lots of experimenting.
+  refreshGridForGridMove(offsetX, offsetY) {
+    // 'canvas.dimensions.sceneX' and 'sceneY' represent the current position of the background after calling 'gridUtils.refreshGrid'.
+    const sceneX = canvas.dimensions.sceneX;
+    const sceneY = canvas.dimensions.sceneY;
+    const snapPos = canvas.grid.grid.getSnappedPosition(sceneX, sceneY);
+    // 'canvas.scene.background.offsetX' and 'offsetY' represent the original offset. Calling 'gridUtils.refreshGrid' doesn't change them.
+    // We need these numbers so that the background maintains its offset relative to the grid.
+    const gridOffsetX = snapPos.x - sceneX + offsetX - canvas.scene.background.offsetX;
+    const gridOffsetY = snapPos.y - sceneY + offsetY - canvas.scene.background.offsetY;
+
+    gridUtils.refreshGrid({ background: true, offsetX: gridOffsetX, offsetY: gridOffsetY, offsetSize: 0 })
   }
 
   // Renders a dialog that lets the user enter known X/Y values.
