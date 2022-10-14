@@ -722,7 +722,6 @@ class ScaleGridLayer extends CanvasLayer {
     const html = await renderTemplate(templatePath, null);
     let offsetX = 0;
     let offsetY = 0;
-    let offsetSize = 0;
 
     // Use the grid toggle code to make the grid temporarily visible.
     gridScaler.cavasGridTempSettings[canvas.scene.id] = null;
@@ -771,34 +770,55 @@ class ScaleGridLayer extends CanvasLayer {
       },
       default: "save",
       render: html => {
-        html.find("#move-right").click(() => {
-          offsetX -= 1;
-          gridUtils.refreshGrid({ background: true, offsetX: -1, offsetY: 0, offsetSize: 0 })
+        let interval;
+
+        html.find("#move-right").mousedown(() => {
+          interval = setInterval(() => {
+            offsetX -= 1;
+            gridUtils.refreshGrid({ background: true, offsetX: -1, offsetY: 0, offsetSize: 0 })
+          }, 50);
         });
-        html.find("#move-left").click(() => {
-          offsetX += 1;
-          gridUtils.refreshGrid({ background: true, offsetX: 1, offsetY: 0, offsetSize: 0 })
+        html.find("#move-left").mousedown(() => {
+          interval = setInterval(() => {
+            offsetX += 1;
+            gridUtils.refreshGrid({ background: true, offsetX: 1, offsetY: 0, offsetSize: 0 })
+          }, 50);
         });
-        html.find("#move-up").click(() => {
-          offsetY += 1;
-          gridUtils.refreshGrid({ background: true, offsetX: 0, offsetY: 1, offsetSize: 0 })
+        html.find("#move-up").mousedown(() => {
+          interval = setInterval(() => {
+            offsetY += 1;
+            gridUtils.refreshGrid({ background: true, offsetX: 0, offsetY: 1, offsetSize: 0 })
+          }, 50);
         });
-        html.find("#move-down").click(() => {
-          offsetY -= 1;
-          gridUtils.refreshGrid({ background: true, offsetX: 0, offsetY: -1, offsetSize: 0 })
+        html.find("#move-down").mousedown(() => {
+          interval = setInterval(() => {
+            offsetY -= 1;
+            gridUtils.refreshGrid({ background: true, offsetX: 0, offsetY: -1, offsetSize: 0 })
+          }, 50);
+        });
+        html.find("#expand-grid").mousedown(() => {
+          interval = gridScaler.repeatResizeGridWithBackgroundOffset(1);
+        });
+        html.find("#contract-grid").mousedown(() => {
+          interval = gridScaler.repeatResizeGridWithBackgroundOffset(-1);
+        });
+        html.find("#move-right").mouseup(() => {
+          clearInterval(interval);
+        });
+        html.find("#move-left").mouseup(() => {
+          clearInterval(interval);
+        });
+        html.find("#move-up").mouseup(() => {
+          clearInterval(interval);
+        });
+        html.find("#move-down").mouseup(() => {
+          clearInterval(interval);
         });
         html.find("#expand-grid").mouseup(() => {
-          console.log(" mouse up ");
+          clearInterval(interval);
         });
-        html.find("#expand-grid").click(() => {
-          offsetSize += 1;
-          gridUtils.refreshGrid({ background: true, offsetX: 0, offsetY: 0, offsetSize: 1 })
-          gridScaler.refreshGridForGridMove(offsetX, offsetY)
-        });
-        html.find("#contract-grid").click(() => {
-          offsetSize -= 1;
-          gridUtils.refreshGrid({ background: true, offsetX: 0, offsetY: 0, offsetSize: -1 })
-          gridScaler.refreshGridForGridMove(offsetX, offsetY)
+        html.find("#contract-grid").mouseup(() => {
+          clearInterval(interval);
         });
       },
       close: () => {
@@ -808,16 +828,42 @@ class ScaleGridLayer extends CanvasLayer {
   }
 
   // We want the background to stay relative to the grid cell it started in as the grid size is changing.
-  // There's probably an easier way to do this, but this is what I ended up with after lots of experimenting.
-  refreshGridForGridMove(offsetX, offsetY) {
-    // 'canvas.dimensions.sceneX' and 'sceneY' represent the current position of the background after calling 'gridUtils.refreshGrid'.
-    const sceneX = canvas.dimensions.sceneX;
-    const sceneY = canvas.dimensions.sceneY;
-    const snapPos = canvas.grid.grid.getSnappedPosition(sceneX, sceneY);
-    // 'canvas.scene.background.offsetX' and 'offsetY' represent the original offset. Calling 'gridUtils.refreshGrid' doesn't change them.
-    // We need these numbers so that the background maintains its offset relative to the grid.
-    const gridOffsetX = snapPos.x - sceneX + offsetX - canvas.scene.background.offsetX;
-    const gridOffsetY = snapPos.y - sceneY + offsetY - canvas.scene.background.offsetY;
+  // So we compare the old snap position to the new one, after the grid size has changed, and apply
+  // the offset. We also don't want the background drifting too far, so sometimes we'll snap it to a new
+  // grid cell.
+  repeatResizeGridWithBackgroundOffset(gridOffset) {
+    let ogSceneX = canvas.dimensions.sceneX;
+    let ogGridSize = canvas.dimensions.size;
+
+    return setInterval(() => {
+      const sceneX = canvas.dimensions.sceneX;
+      const sceneY = canvas.dimensions.sceneY;
+      const snapPos = canvas.grid.grid.getSnappedPosition(sceneX, sceneY);
+
+      gridUtils.refreshGrid({ background: true, offsetX: 0, offsetY: 0, offsetSize: gridOffset })
+
+      if (gridOffset == 1 && sceneX - ogSceneX > ogGridSize) {
+        const gridSize = canvas.dimensions.size;
+        gridScaler.refreshGridForResize(snapPos, -gridSize)
+
+        ogSceneX = sceneX;
+        ogGridSize = gridSize;
+      } else if (gridOffset == -1 && ogSceneX - sceneX > ogGridSize) {
+        const gridSize = canvas.dimensions.size;
+        gridScaler.refreshGridForResize(snapPos, gridSize)
+
+        ogSceneX = sceneX;
+        ogGridSize = gridSize;
+      } else {
+        gridScaler.refreshGridForResize(snapPos, 0)
+      }
+    }, 50)
+  }
+
+  refreshGridForResize(oldSnapPos, extraOffset) {
+    const newSnapPos = canvas.grid.grid.getSnappedPosition(canvas.dimensions.sceneX, canvas.dimensions.sceneY);
+    const gridOffsetX = newSnapPos.x - oldSnapPos.x + extraOffset;
+    const gridOffsetY = newSnapPos.y - oldSnapPos.y + extraOffset;
 
     gridUtils.refreshGrid({ background: true, offsetX: gridOffsetX, offsetY: gridOffsetY, offsetSize: 0 })
   }
